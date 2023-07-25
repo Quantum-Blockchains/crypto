@@ -5,16 +5,19 @@ use commands::{GenerateCmd, PublicCmd, SignCmd, VerifyCmd};
 
 #[derive(Debug, Parser)]
 #[clap(
-	name = "subkey",
-	author = "Parity Team <admin@parity.io>",
-	about = "Utility for generating and restoring with Substrate keys",
-	version
+	name = "crypto",
+	author = "Quantum Blockchains Team",
+	about = "Utility for generating, sign and verification message with Dilithium keys",
+	version = "1.0.0"
 )]
 pub enum Subkey {
-	/// Generate a random account
+	/// Generate key pair
 	Generate(GenerateCmd),
+	/// Pull the public key from the pair
 	Public(PublicCmd),
+	/// Sign the message
 	Sign(SignCmd),
+	/// Message verification
 	Verify(VerifyCmd),
 }
 
