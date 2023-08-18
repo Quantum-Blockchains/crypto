@@ -1,9 +1,9 @@
 mod generate;
-mod public;
 mod utils;
 mod sign;
 mod verify;
+mod error;
 
 pub use self::{
-  generate::GenerateCmd, public::PublicCmd, sign::SignCmd, verify::VerifyCmd,
+  generate::GenerateCmd, sign::SignCmd, verify::VerifyCmd,
 };
