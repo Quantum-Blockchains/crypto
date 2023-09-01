@@ -8,13 +8,9 @@ edition = "2021"
 [dependencies]
 clap = { version = "4.3.17", features = ["derive"] }
 rand = "0.8.5"
-serde_json = "1.0.85"
-serde = { version = "1", features = ["derive"] }
-serde_derive = "1.0.85"
 base64 = "0.21.2"
 crystals-dilithium = "1.0.0"
-reqwest = "0.11.18"
-tokio = { version = "1", features = ["full"] }
 thiserror = "1.0.44"
-httpmock = "0.6.8"
-tempfile = "3.7.1"
+# tempfile = "3.7.1"
+der = { version = "0.7.8", features = ["derive", "oid", "pem"]}
+sha2 ="0.10.7"

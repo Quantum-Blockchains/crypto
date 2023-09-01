@@ -1,6 +1,6 @@
 use clap::Parser;
 mod commands;
-use commands::{GenerateCmd, SignCmd, VerifyCmd};
+use commands::{GenerateCmd, PublicCmd, SignCmd, VerifyCmd};
 
 #[derive(Debug, Parser)]
 #[clap(
@@ -11,19 +11,26 @@ use commands::{GenerateCmd, SignCmd, VerifyCmd};
 )]
 pub enum Subkey {
 	Generate(GenerateCmd),
+	/// Pull the public key from the pair
+	Public(PublicCmd),
 	Sign(SignCmd),
 	Verify(VerifyCmd),
 }
 
-#[tokio::main]
-async fn main() {
+
+fn main() {
 	match  Subkey::parse() {
 		Subkey::Generate(cmd) => {
-			match cmd.run().await {
+			match cmd.run() {
 				Ok(_) => {},
 				Err(err) => println!("ERROR: {:?}", err),
 			}
 		},
+		Subkey::Public(cmd) =>
+			match cmd.run() {
+				Ok(_) => {},
+				Err(err) => println!("ERROR: {:?}", err),
+			},
 		Subkey::Sign(cmd) => {
 			match cmd.run() {
 				Ok(_) => {},

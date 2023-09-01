@@ -1,20 +1,39 @@
 # crypto
 Utility for generating, sign and verification message with Dilithium keys.
-## Comands
-1. generate - generate key pair
+## Build
+1. install rust
     ```bash
-   crypto generate --alg dilithium5 --out keypair
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    ```
+    ```bash
+    $HOME/.cargo/env
+    ```
+2. install make
+    ```bash
+    sudo apt update
+    ```
+    ```bash
+    sudo apt install make
+    ```
+3. build project
+    ```bash
+    make
+    ```
+## Comands
+1. generate - generate key pair 
+    ```bash
+   crypto generate --algorithm dilithium5 --out key.pem
     ```
 2. public - pull the public key from the pair
     ```bash
-    crypto public --in keypair --out key.pub
+    crypto public --in key.pem --out pub.pem
     ```
-3. sign - sign the message
+3. sign - sign the file
     ```bash
-    crypto sign -m message.txt --in keypair --out signature
+    crypto sign --sec key.pem --out signature --file <PATH>
     ```
-4. verify - message verification
+4. verify - verification the file
    ```bash
-    crypto verify -m message.txt --sig signature --in key.pub
+    crypto verify --sig signature --pub pub.pem --file <PATH>
     ```
 
