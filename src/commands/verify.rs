@@ -1,29 +1,31 @@
-use std::{fs::File, io::Read};
-
+use super::{arg_enums::Format, utils};
+use crate::commands::{
+    asc1_dilithium::{
+        SubjectPublicKeyInfoBorrowed, SubjectPublicKeyInfoOwned, OID_DILITHIUM2, OID_DILITHIUM3,
+        OID_DILITHIUM5,
+    },
+    error::CryptoError,
+};
 use clap::Parser;
 use crystals_dilithium::{dilithium2, dilithium3, dilithium5};
 use der::{asn1::BitString, Decode, DecodePem};
-use sha2::{Sha256, Digest};
-use crate::commands::{error::CryptoError, asc1_dilithium::{SubjectPublicKeyInfoBorrowed, SubjectPublicKeyInfoOwned, OID_DILITHIUM2, OID_DILITHIUM3, OID_DILITHIUM5}};
-use super::{utils, arg_enums::Format};
+use sha2::{Digest, Sha256};
+use std::{fs::File, io::Read};
 
 #[derive(Debug, Clone, Parser)]
-#[clap(name = "verify", about = "Message verification")]
+#[clap(name = "verify", about = "Signature verification")]
 pub struct VerifyCmd {
-    ///A message to be verified
-    // #[clap(short = 'm', long)]
-    // message: String,
     ///Input format (DER or PEM)
     #[clap(long = "inform", value_name = "PEM|DER", default_value = "PEM")]
     pub inform: Format,
-    ///The public key that will be used to verify the message
-    #[clap(long="pub")]
+    ///Input public key
+    #[clap(long = "pub", value_name = "FILE")]
     pub pub_path: String,
-    ///The signature that will be used to verify the message
-    #[clap(long="sig")]
+    ///Input signature
+    #[clap(long = "sig", value_name = "FILE")]
     pub sig_path: String,
-    ///Path for writing the signature to the file
-    #[clap(long="file")]
+    ///Input file for verification
+    #[clap(long = "file", value_name = "FILE")]
     pub file_path: String,
 }
 
@@ -31,13 +33,13 @@ impl VerifyCmd {
     pub fn run(&self) -> Result<(), CryptoError> {
         let bytes = utils::read_file(&self.pub_path)?;
         let sig_bytes = utils::read_file(&self.sig_path)?;
-        
+
         let key: BitString;
         let algorithm: String;
-        if self.inform == Format::DER {
+        if self.inform == Format::Der {
             let public_key = SubjectPublicKeyInfoBorrowed::from_der(&bytes).unwrap();
             algorithm = public_key.algorithm.algorithm.to_string();
-            key = BitString::from_der(public_key.subject_public_key).unwrap(); 
+            key = BitString::from_der(public_key.subject_public_key).unwrap();
         } else {
             let public_key = SubjectPublicKeyInfoOwned::from_pem(&bytes).unwrap();
             algorithm = public_key.algorithm.algorithm.to_string();
@@ -63,7 +65,6 @@ impl VerifyCmd {
 
         let message_hash = hasher.finalize();
 
-
         let ver = match algorithm_str {
             OID_DILITHIUM2 => {
                 if bytes_public_key.len() != dilithium2::PUBLICKEYBYTES {
@@ -71,7 +72,7 @@ impl VerifyCmd {
                         "A public key of length {:?} is expected a signature of length {:?}",
                         dilithium2::PUBLICKEYBYTES,
                         dilithium2::SIGNBYTES,
-                    )))
+                    )));
                 }
                 let public = dilithium2::PublicKey::from_bytes(bytes_public_key);
                 public.verify(&message_hash, &sig_bytes)
@@ -82,7 +83,7 @@ impl VerifyCmd {
                         "A public key of length {:?} is expected a signature of length {:?}",
                         dilithium2::PUBLICKEYBYTES,
                         dilithium2::SIGNBYTES,
-                    )))
+                    )));
                 }
                 let public = dilithium3::PublicKey::from_bytes(bytes_public_key);
                 public.verify(&message_hash, &sig_bytes)
@@ -93,14 +94,12 @@ impl VerifyCmd {
                         "A public key of length {:?} is expected a signature of length {:?}",
                         dilithium2::PUBLICKEYBYTES,
                         dilithium2::SIGNBYTES,
-                    )))
+                    )));
                 }
                 let public = dilithium5::PublicKey::from_bytes(bytes_public_key);
                 public.verify(&message_hash, &sig_bytes)
             }
-            _ => {
-                return Err(CryptoError::InvalidLengthSignature(sig_bytes.len()))
-            }
+            _ => return Err(CryptoError::InvalidLengthSignature(sig_bytes.len())),
         };
         println!("Verification: {:?}", ver);
         Ok(())
@@ -109,46 +108,43 @@ impl VerifyCmd {
 
 #[cfg(test)]
 mod test {
-    use std::fs;
-    use crate::commands::{GenerateCmd, SignCmd};
     use super::*;
+    use crate::commands::{GenerateCmd, PublicCmd, SignCmd};
+    use std::fs;
 
     #[test]
     fn verify_message() {
         let test_sec_file = "sec_test";
         let test_pub_file = "pub_test";
         let test_sig_file = "sig_test";
-        let generate = GenerateCmd::parse_from(&[
-            "generate",
-            "--algorithm",
-            "dil5",
-            "--sec",
-            test_sec_file,
-            "--pub",
-            test_pub_file,
-        ]);
+        let generate =
+            GenerateCmd::parse_from(&["generate", "--algorithm", "dil2", "--out", test_sec_file]);
+
+        let public =
+            PublicCmd::parse_from(&["public", "--in", test_sec_file, "--out", test_pub_file]);
 
         let sign = SignCmd::parse_from(&[
             "sign",
-            "-m",
-            "test message",
             "--sec",
             test_sec_file,
             "--out",
             test_sig_file,
+            "--file",
+            test_pub_file,
         ]);
 
         let verify = VerifyCmd::parse_from(&[
             "verify",
-            "-m",
-            "test message",
             "--sig",
             test_sig_file,
             "--pub",
             test_pub_file,
+            "--file",
+            test_pub_file,
         ]);
 
         assert!(generate.run().is_ok());
+        assert!(public.run().is_ok());
         assert!(sign.run().is_ok());
         assert!(verify.run().is_ok());
 

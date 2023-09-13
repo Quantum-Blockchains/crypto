@@ -1,7 +1,7 @@
 use der::{
-    asn1::{ObjectIdentifier, OctetString, BitString},
+    asn1::{BitString, ObjectIdentifier, OctetString},
     pem::PemLabel,
-    Sequence, ValueOrd
+    Sequence, ValueOrd,
 };
 
 pub const OID_DILITHIUM2: &str = "1.3.6.1.4.1.2.267.7.4.4";

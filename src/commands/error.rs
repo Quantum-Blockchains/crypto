@@ -13,5 +13,5 @@ pub enum CryptoError {
     #[error("This secret key length is not supported: {0}")]
     InvalidLengthSignature(usize),
     #[error(transparent)]
-	Io(#[from] std::io::Error),
+    Io(#[from] std::io::Error),
 }

@@ -1,11 +1,11 @@
-use std::str::FromStr;
 use super::error::CryptoError;
+use std::str::FromStr;
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Algorithm {
     Dilithium2,
     Dilithium3,
-    Dilithium5
+    Dilithium5,
 }
 
 impl FromStr for Algorithm {
@@ -19,15 +19,15 @@ impl FromStr for Algorithm {
             "dil3" => Ok(Algorithm::Dilithium3),
             "dilithium5" => Ok(Algorithm::Dilithium5),
             "dil5" => Ok(Algorithm::Dilithium5),
-            _ => return Err(CryptoError::InvalidAlgorithm(s.to_string())),
+            _ => Err(CryptoError::InvalidAlgorithm(s.to_string())),
         }
     }
 }
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum Format {
-    PEM,
-    DER
+    Pem,
+    Der,
 }
 
 impl FromStr for Format {
@@ -35,9 +35,9 @@ impl FromStr for Format {
 
     fn from_str(s: &str) -> Result<Self, CryptoError> {
         match s {
-            "PEM" => Ok(Format::PEM),
-            "DER" => Ok(Format::DER),
-            _ => return Err(CryptoError::InvalidFormat(s.to_string())),
+            "PEM" => Ok(Format::Pem),
+            "DER" => Ok(Format::Der),
+            _ => Err(CryptoError::InvalidFormat(s.to_string())),
         }
     }
 }
