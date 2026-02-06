@@ -7,10 +7,10 @@ use super::{
     error::CryptoError,
     utils,
 };
-use crate::commands::arg_enums::Format::{Der, Pem};
+use crate::commands::{arg_enums::Format::{Der, Pem}, asc1_dilithium::{OID_MLDSA44, OID_MLDSA65, OID_MLDSA87}};
 use base64::{engine::general_purpose, Engine as _};
 use clap::Parser;
-use crystals_dilithium::{dilithium2, dilithium3, dilithium5};
+use crystals_dilithium::{dilithium2, dilithium3, dilithium5, ml_dsa_44, ml_dsa_65, ml_dsa_87};
 use der::{pem::LineEnding, Encode, EncodePem};
 use rand::*;
 
@@ -124,6 +124,81 @@ impl GenerateCmd {
                     utils::output(pem.as_bytes(), &self.secret_output_path, Pem);
                 }
             }
+            Algorithm::Mldsa44 => {
+                let algorithm_identifier = AlgorithmIdentifier {
+                    algorithm: OID_MLDSA44.parse().unwrap(),
+                };
+                let keypair = ml_dsa_44::Keypair::generate(Some(&seed));
+                let mut bytes_keypair = keypair.to_bytes().to_vec();
+
+                vector_bytes_private_key.push(0x0F);
+                vector_bytes_private_key.push(0x20);
+                vector_bytes_private_key.append(&mut bytes_keypair);
+
+                let der_private_key: OneAsymmetricKeyBorrowed = OneAsymmetricKeyBorrowed {
+                    version: 0,
+                    private_key_algorithm: algorithm_identifier,
+                    private_key: &vector_bytes_private_key,
+                };
+
+                if self.outform == Format::Der {
+                    let der = der_private_key.to_der().unwrap();
+                    utils::output(&der, &self.secret_output_path, Der);
+                } else {
+                    let pem = der_private_key.to_pem(LineEnding::LF).unwrap();
+                    utils::output(pem.as_bytes(), &self.secret_output_path, Pem);
+                }
+            }
+            Algorithm::Mldsa65 => {
+                let algorithm_identifier = AlgorithmIdentifier {
+                    algorithm: OID_MLDSA65.parse().unwrap(),
+                };
+                let keypair = ml_dsa_65::Keypair::generate(Some(&seed));
+                let mut bytes_keypair = keypair.to_bytes().to_vec();
+
+                vector_bytes_private_key.push(0x17);
+                vector_bytes_private_key.push(0x60);
+                vector_bytes_private_key.append(&mut bytes_keypair);
+
+                let der_private_key: OneAsymmetricKeyBorrowed = OneAsymmetricKeyBorrowed {
+                    version: 0,
+                    private_key_algorithm: algorithm_identifier,
+                    private_key: &vector_bytes_private_key,
+                };
+
+                if self.outform == Format::Der {
+                    let der = der_private_key.to_der().unwrap();
+                    utils::output(&der, &self.secret_output_path, Der);
+                } else {
+                    let pem = der_private_key.to_pem(LineEnding::LF).unwrap();
+                    utils::output(pem.as_bytes(), &self.secret_output_path, Pem);
+                }
+            }
+            Algorithm::Mldsa87 => {
+                let algorithm_identifier = AlgorithmIdentifier {
+                    algorithm: OID_MLDSA87.parse().unwrap(),
+                };
+                let keypair = ml_dsa_87::Keypair::generate(Some(&seed));
+                let mut bytes_keypair = keypair.to_bytes().to_vec();
+
+                vector_bytes_private_key.push(0x1D);
+                vector_bytes_private_key.push(0x40);
+                vector_bytes_private_key.append(&mut bytes_keypair);
+
+                let der_private_key: OneAsymmetricKeyBorrowed = OneAsymmetricKeyBorrowed {
+                    version: 0,
+                    private_key_algorithm: algorithm_identifier,
+                    private_key: &vector_bytes_private_key,
+                };
+
+                if self.outform == Format::Der {
+                    let der = der_private_key.to_der().unwrap();
+                    utils::output(&der, &self.secret_output_path, Der);
+                } else {
+                    let pem = der_private_key.to_pem(LineEnding::LF).unwrap();
+                    utils::output(pem.as_bytes(), &self.secret_output_path, Pem);
+                }
+            }
         };
         Ok(())
     }
@@ -133,38 +208,42 @@ impl GenerateCmd {
 mod tests {
     use super::*;
     use std::fs;
-    use std::path::Path;
 
-    #[test]
-    fn generate_dilithium2() {
-        let generate = GenerateCmd::parse_from(&["generate", "-a", "dil2"]);
-        assert!(generate.run().is_ok())
+    fn cleanup(files: &[String]) {
+        for f in files {
+            let _ = fs::remove_file(f);
+        }
     }
 
-    #[test]
-    fn generate_dilithium3() {
-        let generate = GenerateCmd::parse_from(&["generate", "-a", "dil3"]);
-        assert!(generate.run().is_ok())
-    }
+    fn run_case(alg: &str, out_format: &str) {
+        let tag = format!("{}_{}", alg, out_format).to_lowercase();
+        let out_file = format!(".out_test_{}", tag);
 
-    #[test]
-    fn generate_dilithium5() {
-        let generate = GenerateCmd::parse_from(&["generate", "-a", "dil5"]);
-        assert!(generate.run().is_ok())
-    }
+        let generate = GenerateCmd::parse_from(&[
+            "generate",
+            "--algorithm",
+            alg,
+            "--out",
+            &out_file,
+            "--outform",
+            out_format,
+        ]);
 
-    #[test]
-    fn generate_dilithium2_and_write_keys_to_files() {
-        let test_out_file = "out_test";
-        let generate =
-            GenerateCmd::parse_from(&["generate", "--algorithm", "dil5", "--out", test_out_file]);
         assert!(generate.run().is_ok());
-        let path_sec = Path::new(test_out_file);
-        if path_sec.exists() {
-            fs::remove_file(test_out_file).unwrap();
-            assert!(true);
-        } else {
-            assert!(false);
+        assert!(std::path::Path::new(&out_file).exists());
+
+        cleanup(&vec![out_file]);
+    }
+
+    #[test]
+    fn generate_all_algorithms_all_formats() {
+        let algorithms = ["dil2", "dil3", "dil5", "mldsa44", "mldsa65", "mldsa87"];
+        let formats = ["PEM", "DER"];
+
+        for alg in algorithms {
+            for out_format in formats {
+                run_case(alg, out_format);
+            }
         }
     }
 }

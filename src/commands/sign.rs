@@ -2,16 +2,16 @@ use super::{
     arg_enums::Format,
     asc1_dilithium::{
         OneAsymmetricKeyBorrowed, OneAsymmetricKeyOwned, OID_DILITHIUM2, OID_DILITHIUM3,
-        OID_DILITHIUM5,
+        OID_DILITHIUM5, OID_MLDSA44, OID_MLDSA65, OID_MLDSA87,
     },
     error::CryptoError,
     utils,
 };
 use crate::commands::arg_enums::Format::Der;
 use clap::Parser;
-use crystals_dilithium::{dilithium2, dilithium3, dilithium5};
+use crystals_dilithium::{dilithium2, dilithium3, dilithium5, ml_dsa_44, ml_dsa_65, ml_dsa_87};
 use der::{asn1::OctetString, Decode, DecodePem};
-use sha2::{Digest, Sha256};
+// use sha2::{Digest, Sha256};
 use std::{fs::File, io::Read};
 
 #[derive(Debug, Clone, Parser)]
@@ -59,35 +59,56 @@ impl SignCmd {
 
         let mut file = File::open(&self.file_path)?;
 
-        let mut hasher = Sha256::new();
-        let mut buffer = [0; 4096];
+        // let mut hasher = Sha256::new();
+        // let mut buffer = [0; 4096];
 
-        loop {
-            let bytes_read = file.read(&mut buffer)?;
-            if bytes_read == 0 {
-                break;
-            }
-            hasher.update(&buffer[..bytes_read]);
-        }
+        // loop {
+        //     let bytes_read = file.read(&mut buffer)?;
+        //     if bytes_read == 0 {
+        //         break;
+        //     }
+        //     hasher.update(&buffer[..bytes_read]);
+        // }
 
-        let message_hash = hasher.finalize();
+        // let message_hash = hasher.finalize();
+
+        let mut message = Vec::new();
+        file.read_to_end(&mut message)?;
 
         match algorithm_str {
             OID_DILITHIUM2 => {
                 let keypair = dilithium2::Keypair::from_bytes(bytes_keypair);
-                let signature = keypair.sign(&message_hash);
+                let signature = keypair.sign(&message);
                 let sig_bytes = signature.as_slice();
                 utils::output(sig_bytes, &self.out_path, Der);
             }
             OID_DILITHIUM3 => {
-                let keypair = dilithium3::SecretKey::from_bytes(&bytes);
-                let signature = keypair.sign(&message_hash);
+                let keypair = dilithium3::Keypair::from_bytes(&bytes_keypair);
+                let signature = keypair.sign(&message);
                 let sig_bytes = signature.as_slice();
                 utils::output(sig_bytes, &self.out_path, Der);
             }
             OID_DILITHIUM5 => {
-                let keypair = dilithium5::SecretKey::from_bytes(&bytes);
-                let signature = keypair.sign(&message_hash);
+                let keypair = dilithium5::Keypair::from_bytes(&bytes_keypair);
+                let signature = keypair.sign(&message);
+                let sig_bytes = signature.as_slice();
+                utils::output(sig_bytes, &self.out_path, Der);
+            }
+            OID_MLDSA44 => {
+                let keypair = ml_dsa_44::Keypair::from_bytes(&bytes_keypair);
+                let signature = keypair.sign(&message, None, false).unwrap();
+                let sig_bytes = signature.as_slice();
+                utils::output(sig_bytes, &self.out_path, Der);
+            }
+            OID_MLDSA65 => {
+                let keypair = ml_dsa_65::Keypair::from_bytes(&bytes_keypair);
+                let signature = keypair.sign(&message, None, false).unwrap();
+                let sig_bytes = signature.as_slice();
+                utils::output(sig_bytes, &self.out_path, Der);
+            }
+            OID_MLDSA87 => {
+                let keypair = ml_dsa_87::Keypair::from_bytes(&bytes_keypair);
+                let signature = keypair.sign(&message, None, false).unwrap();
                 let sig_bytes = signature.as_slice();
                 utils::output(sig_bytes, &self.out_path, Der);
             }
@@ -102,59 +123,72 @@ mod test {
     use super::*;
     use crate::commands::{GenerateCmd, PublicCmd};
     use std::fs;
-    use std::path::Path;
 
-    #[test]
-    fn sign_message() {
-        let test_sec_file = "sec_test";
-        let test_pub_file = "pub_test";
-        let generate =
-            GenerateCmd::parse_from(&["generate", "--algorithm", "dil2", "--out", test_sec_file]);
-
-        let public =
-            PublicCmd::parse_from(&["public", "--in", test_sec_file, "--out", test_pub_file]);
-
-        let sign = SignCmd::parse_from(&["sign", "--sec", test_sec_file, "--file", test_pub_file]);
-
-        assert!(generate.run().is_ok());
-        assert!(public.run().is_ok());
-        assert!(sign.run().is_ok());
-        fs::remove_file(test_sec_file).unwrap();
-        fs::remove_file(test_pub_file).unwrap();
+    fn cleanup(files: &[String]) {
+        for f in files {
+            let _ = fs::remove_file(f);
+        }
     }
 
-    #[test]
-    fn sign_message_and_write_signature_to_file() {
-        let test_sec_file = "sec_test_1";
-        let test_pub_file = "pub_test_1";
-        let test_sig_file = "sig_test_1";
-        let generate =
-            GenerateCmd::parse_from(&["generate", "--algorithm", "dil2", "--out", test_sec_file]);
+    fn run_case(alg: &str, sec_format: &str, pub_format: &str) {
+        let tag = format!("{}_{}_{}", alg, sec_format, pub_format).to_lowercase();
+        let sec_file = format!("sign_sec_test_{}", tag);
+        let pub_file = format!("sign_pub_test_{}", tag);
+        let sig_file = format!("sign_sig_test_{}", tag);
 
-        let public =
-            PublicCmd::parse_from(&["public", "--in", test_sec_file, "--out", test_pub_file]);
+        let generate = GenerateCmd::parse_from(&[
+            "generate",
+            "--algorithm",
+            alg,
+            "--out",
+            &sec_file,
+            "--outform",
+            sec_format,
+        ]);
+
+        let public = PublicCmd::parse_from(&[
+            "public",
+            "--in",
+            &sec_file,
+            "--inform",
+            sec_format,
+            "--out",
+            &pub_file,
+            "--outform",
+            pub_format,
+        ]);
 
         let sign = SignCmd::parse_from(&[
             "sign",
             "--sec",
-            test_sec_file,
+            &sec_file,
+            "--inform",
+            sec_format,
             "--out",
-            test_sig_file,
+            &sig_file,
             "--file",
-            test_pub_file,
+            &pub_file,
         ]);
 
         assert!(generate.run().is_ok());
         assert!(public.run().is_ok());
         assert!(sign.run().is_ok());
-        let path_sig = Path::new(test_sig_file);
-        if path_sig.exists() {
-            fs::remove_file(test_sig_file).unwrap();
-            assert!(true);
-        } else {
-            assert!(false);
+        assert!(std::path::Path::new(&sig_file).exists());
+
+        cleanup(&vec![sec_file, pub_file, sig_file]);
+    }
+
+    #[test]
+    fn sign_all_algorithms_all_formats() {
+        let algorithms = ["dil2", "dil3", "dil5", "mldsa44", "mldsa65", "mldsa87"];
+        let formats = ["PEM", "DER"];
+
+        for alg in algorithms {
+            for sec_format in formats {
+                for pub_format in formats {
+                    run_case(alg, sec_format, pub_format);
+                }
+            }
         }
-        fs::remove_file(test_pub_file).unwrap();
-        fs::remove_file(test_sec_file).unwrap();
     }
 }

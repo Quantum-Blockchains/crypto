@@ -2,14 +2,14 @@ use super::{arg_enums::Format, utils};
 use crate::commands::{
     asc1_dilithium::{
         SubjectPublicKeyInfoBorrowed, SubjectPublicKeyInfoOwned, OID_DILITHIUM2, OID_DILITHIUM3,
-        OID_DILITHIUM5,
+        OID_DILITHIUM5, OID_MLDSA44, OID_MLDSA65, OID_MLDSA87,
     },
     error::CryptoError,
 };
 use clap::Parser;
-use crystals_dilithium::{dilithium2, dilithium3, dilithium5};
+use crystals_dilithium::{dilithium2, dilithium3, dilithium5, ml_dsa_44, ml_dsa_65, ml_dsa_87};
 use der::{asn1::BitString, Decode, DecodePem};
-use sha2::{Digest, Sha256};
+// use sha2::{Digest, Sha256};
 use std::{fs::File, io::Read};
 
 #[derive(Debug, Clone, Parser)]
@@ -52,18 +52,21 @@ impl VerifyCmd {
 
         let mut file = File::open(&self.file_path)?;
 
-        let mut hasher = Sha256::new();
-        let mut buffer = [0; 4096];
+        // let mut hasher = Sha256::new();
+        // let mut buffer = [0; 4096];
 
-        loop {
-            let bytes_read = file.read(&mut buffer)?;
-            if bytes_read == 0 {
-                break;
-            }
-            hasher.update(&buffer[..bytes_read]);
-        }
+        // loop {
+        //     let bytes_read = file.read(&mut buffer)?;
+        //     if bytes_read == 0 {
+        //         break;
+        //     }
+        //     hasher.update(&buffer[..bytes_read]);
+        // }
 
-        let message_hash = hasher.finalize();
+        // let message_hash = hasher.finalize();
+
+        let mut message = Vec::new();
+        file.read_to_end(&mut message)?;
 
         let ver = match algorithm_str {
             OID_DILITHIUM2 => {
@@ -75,7 +78,7 @@ impl VerifyCmd {
                     )));
                 }
                 let public = dilithium2::PublicKey::from_bytes(bytes_public_key);
-                public.verify(&message_hash, &sig_bytes)
+                public.verify(&message, &sig_bytes)
             }
             OID_DILITHIUM3 => {
                 if bytes_public_key.len() != dilithium3::PUBLICKEYBYTES {
@@ -86,7 +89,7 @@ impl VerifyCmd {
                     )));
                 }
                 let public = dilithium3::PublicKey::from_bytes(bytes_public_key);
-                public.verify(&message_hash, &sig_bytes)
+                public.verify(&message, &sig_bytes)
             }
             OID_DILITHIUM5 => {
                 if bytes_public_key.len() != dilithium5::PUBLICKEYBYTES {
@@ -97,7 +100,40 @@ impl VerifyCmd {
                     )));
                 }
                 let public = dilithium5::PublicKey::from_bytes(bytes_public_key);
-                public.verify(&message_hash, &sig_bytes)
+                public.verify(&message, &sig_bytes)
+            }
+            OID_MLDSA44 => {
+                if bytes_public_key.len() != ml_dsa_44::PUBLICKEYBYTES {
+                    return Err(CryptoError::InvalidLengthPublicKey(format!(
+                        "A public key of length {:?} is expected a signature of length {:?}",
+                        ml_dsa_44::PUBLICKEYBYTES,
+                        ml_dsa_44::SIGNBYTES,
+                    )));
+                }
+                let public = ml_dsa_44::PublicKey::from_bytes(bytes_public_key);
+                public.verify(&message, &sig_bytes, None)
+            }
+            OID_MLDSA65 => {
+                if bytes_public_key.len() != ml_dsa_65::PUBLICKEYBYTES {
+                    return Err(CryptoError::InvalidLengthPublicKey(format!(
+                        "A public key of length {:?} is expected a signature of length {:?}",
+                        ml_dsa_65::PUBLICKEYBYTES,
+                        ml_dsa_65::SIGNBYTES,
+                    )));
+                }
+                let public = ml_dsa_65::PublicKey::from_bytes(bytes_public_key);
+                public.verify(&message, &sig_bytes, None)
+            }
+            OID_MLDSA87 => {
+                if bytes_public_key.len() != ml_dsa_87::PUBLICKEYBYTES {
+                    return Err(CryptoError::InvalidLengthPublicKey(format!(
+                        "A public key of length {:?} is expected a signature of length {:?}",
+                        ml_dsa_87::PUBLICKEYBYTES,
+                        ml_dsa_87::SIGNBYTES,
+                    )));
+                }
+                let public = ml_dsa_87::PublicKey::from_bytes(bytes_public_key);
+                public.verify(&message, &sig_bytes, None)
             }
             _ => return Err(CryptoError::InvalidLengthSignature(sig_bytes.len())),
         };
@@ -112,35 +148,62 @@ mod test {
     use crate::commands::{GenerateCmd, PublicCmd, SignCmd};
     use std::fs;
 
-    #[test]
-    fn verify_message() {
-        let test_sec_file = "sec_test";
-        let test_pub_file = "pub_test";
-        let test_sig_file = "sig_test";
-        let generate =
-            GenerateCmd::parse_from(&["generate", "--algorithm", "dil2", "--out", test_sec_file]);
+    fn cleanup(files: &[String]) {
+        for f in files {
+            let _ = fs::remove_file(f);
+        }
+    }
 
-        let public =
-            PublicCmd::parse_from(&["public", "--in", test_sec_file, "--out", test_pub_file]);
+    fn run_case(alg: &str, sec_format: &str, pub_format: &str) {
+        let tag = format!("{}_{}_{}", alg, sec_format, pub_format).to_lowercase();
+        let sec_file = format!("ver_sec_test_{}", tag);
+        let pub_file = format!("ver_pub_test_{}", tag);
+        let sig_file = format!("ver_sig_test_{}", tag);
+
+        let generate = GenerateCmd::parse_from(&[
+            "generate",
+            "--algorithm",
+            alg,
+            "--out",
+            &sec_file,
+            "--outform",
+            sec_format,
+        ]);
+
+        let public = PublicCmd::parse_from(&[
+            "public",
+            "--in",
+            &sec_file,
+            "--inform",
+            sec_format,
+            "--out",
+            &pub_file,
+            "--outform",
+            pub_format,
+        ]);
 
         let sign = SignCmd::parse_from(&[
             "sign",
             "--sec",
-            test_sec_file,
+            &sec_file,
+            "--inform",
+            sec_format,
             "--out",
-            test_sig_file,
+            &sig_file,
             "--file",
-            test_pub_file,
+            &pub_file,
         ]);
 
         let verify = VerifyCmd::parse_from(&[
             "verify",
             "--sig",
-            test_sig_file,
+            &sig_file,
             "--pub",
-            test_pub_file,
+            &pub_file,
+            "--inform",
+            pub_format,
             "--file",
-            test_pub_file,
+            &pub_file,
         ]);
 
         assert!(generate.run().is_ok());
@@ -148,8 +211,20 @@ mod test {
         assert!(sign.run().is_ok());
         assert!(verify.run().is_ok());
 
-        fs::remove_file(test_pub_file).unwrap();
-        fs::remove_file(test_sec_file).unwrap();
-        fs::remove_file(test_sig_file).unwrap();
+        cleanup(&vec![sec_file, pub_file, sig_file]);
+    }
+
+    #[test]
+    fn verify_all_algorithms_all_formats() {
+        let algorithms = ["dil2", "dil3", "dil5", "mldsa44", "mldsa65", "mldsa87"];
+        let formats = ["PEM"];
+
+        for alg in algorithms {
+            for sec_format in formats {
+                for pub_format in formats {
+                    run_case(alg, sec_format, pub_format);
+                }
+            }
+        }
     }
 }

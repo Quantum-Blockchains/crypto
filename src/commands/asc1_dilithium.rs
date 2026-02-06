@@ -7,6 +7,9 @@ use der::{
 pub const OID_DILITHIUM2: &str = "1.3.6.1.4.1.2.267.7.4.4";
 pub const OID_DILITHIUM3: &str = "1.3.6.1.4.1.2.267.7.6.5";
 pub const OID_DILITHIUM5: &str = "1.3.6.1.4.1.2.267.7.8.7";
+pub const OID_MLDSA44: &str = "2.16.840.1.101.3.4.3.17";
+pub const OID_MLDSA65: &str = "2.16.840.1.101.3.4.3.18";
+pub const OID_MLDSA87: &str = "2.16.840.1.101.3.4.3.19";
 
 /// X.509 `AlgorithmIdentifier`
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Sequence, ValueOrd)]

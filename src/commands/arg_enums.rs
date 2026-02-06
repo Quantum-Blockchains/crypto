@@ -6,6 +6,9 @@ pub enum Algorithm {
     Dilithium2,
     Dilithium3,
     Dilithium5,
+    Mldsa44,
+    Mldsa65,
+    Mldsa87,
 }
 
 impl FromStr for Algorithm {
@@ -19,6 +22,9 @@ impl FromStr for Algorithm {
             "dil3" => Ok(Algorithm::Dilithium3),
             "dilithium5" => Ok(Algorithm::Dilithium5),
             "dil5" => Ok(Algorithm::Dilithium5),
+            "mldsa44" => Ok(Algorithm::Mldsa44),
+            "mldsa65" => Ok(Algorithm::Mldsa65),
+            "mldsa87" => Ok(Algorithm::Mldsa87),
             _ => Err(CryptoError::InvalidAlgorithm(s.to_string())),
         }
     }

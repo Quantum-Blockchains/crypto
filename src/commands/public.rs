@@ -4,11 +4,11 @@ use crate::commands::arg_enums::Format;
 use crate::commands::arg_enums::Format::{Der, Pem};
 use crate::commands::asc1_dilithium::{
     AlgorithmIdentifier, OneAsymmetricKeyBorrowed, OneAsymmetricKeyOwned, OID_DILITHIUM2,
-    OID_DILITHIUM3, OID_DILITHIUM5,
+    OID_DILITHIUM3, OID_DILITHIUM5, OID_MLDSA44, OID_MLDSA65, OID_MLDSA87,
 };
 use crate::commands::error::CryptoError;
 use clap::Parser;
-use crystals_dilithium::{dilithium2, dilithium3, dilithium5};
+use crystals_dilithium::{dilithium2, dilithium3, dilithium5, ml_dsa_44, ml_dsa_65, ml_dsa_87};
 use der::asn1::OctetString;
 use der::pem::LineEnding;
 use der::{Decode, DecodePem, Encode, EncodePem};
@@ -103,6 +103,66 @@ impl PublicCmd {
                 let keypair = dilithium5::Keypair::from_bytes(bytes_keypair);
                 let algorithm_identifier = AlgorithmIdentifier {
                     algorithm: OID_DILITHIUM5.parse().unwrap(),
+                };
+                let bytes_public_key = keypair.public.bytes.to_vec();
+
+                let der_public_key: SubjectPublicKeyInfoBorrowed = SubjectPublicKeyInfoBorrowed {
+                    algorithm: algorithm_identifier,
+                    subject_public_key: &bytes_public_key,
+                };
+
+                if self.outform == Format::Der {
+                    let der = der_public_key.to_der().unwrap();
+                    utils::output(&der, &self.out_path, Der);
+                } else {
+                    let pem = der_public_key.to_pem(LineEnding::LF).unwrap();
+                    utils::output(pem.as_bytes(), &self.out_path, Pem);
+                }
+            }
+            OID_MLDSA44 => {
+                let keypair = ml_dsa_44::Keypair::from_bytes(bytes_keypair);
+                let algorithm_identifier = AlgorithmIdentifier {
+                    algorithm: OID_MLDSA44.parse().unwrap(),
+                };
+                let bytes_public_key = keypair.public.bytes.to_vec();
+
+                let der_public_key: SubjectPublicKeyInfoBorrowed = SubjectPublicKeyInfoBorrowed {
+                    algorithm: algorithm_identifier,
+                    subject_public_key: &bytes_public_key,
+                };
+
+                if self.outform == Format::Der {
+                    let der = der_public_key.to_der().unwrap();
+                    utils::output(&der, &self.out_path, Der);
+                } else {
+                    let pem = der_public_key.to_pem(LineEnding::LF).unwrap();
+                    utils::output(pem.as_bytes(), &self.out_path, Pem);
+                }
+            }
+            OID_MLDSA65 => {
+                let keypair = ml_dsa_65::Keypair::from_bytes(bytes_keypair);
+                let algorithm_identifier = AlgorithmIdentifier {
+                    algorithm: OID_MLDSA65.parse().unwrap(),
+                };
+                let bytes_public_key = keypair.public.bytes.to_vec();
+
+                let der_public_key: SubjectPublicKeyInfoBorrowed = SubjectPublicKeyInfoBorrowed {
+                    algorithm: algorithm_identifier,
+                    subject_public_key: &bytes_public_key,
+                };
+
+                if self.outform == Format::Der {
+                    let der = der_public_key.to_der().unwrap();
+                    utils::output(&der, &self.out_path, Der);
+                } else {
+                    let pem = der_public_key.to_pem(LineEnding::LF).unwrap();
+                    utils::output(pem.as_bytes(), &self.out_path, Pem);
+                }
+            }
+            OID_MLDSA87 => {
+                let keypair = ml_dsa_87::Keypair::from_bytes(bytes_keypair);
+                let algorithm_identifier = AlgorithmIdentifier {
+                    algorithm: OID_MLDSA87.parse().unwrap(),
                 };
                 let bytes_public_key = keypair.public.bytes.to_vec();
 

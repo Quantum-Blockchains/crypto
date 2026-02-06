@@ -8,7 +8,8 @@ edition = "2021"
 clap = { version = "4.3.17", features = ["derive"] }
 rand = "0.8.5"
 base64 = "0.21.2"
-crystals-dilithium = "1.0.0"
+# crystals-dilithium = "1.0.0"
+crystals-dilithium = { git = "https://github.com/Quantum-Blockchains/dilithium.git", branch = "test" }
 thiserror = "1.0.44"
 der = { version = "0.7.8", features = ["derive", "oid", "pem"]}
 sha2 ="0.10.7"
