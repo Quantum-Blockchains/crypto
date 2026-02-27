@@ -8,7 +8,7 @@ use crate::commands::{
 };
 use clap::Parser;
 use crystals_dilithium::{dilithium2, dilithium3, dilithium5, ml_dsa_44, ml_dsa_65, ml_dsa_87};
-use der::{asn1::BitString, Decode, DecodePem};
+use der::{Decode, DecodePem};
 // use sha2::{Digest, Sha256};
 use std::{fs::File, io::Read};
 
@@ -34,19 +34,17 @@ impl VerifyCmd {
         let bytes = utils::read_file(&self.pub_path)?;
         let sig_bytes = utils::read_file(&self.sig_path)?;
 
-        let key: BitString;
         let algorithm: String;
+        let bytes_public_key: Vec<u8>;
         if self.inform == Format::Der {
             let public_key = SubjectPublicKeyInfoBorrowed::from_der(&bytes).unwrap();
             algorithm = public_key.algorithm.algorithm.to_string();
-            key = BitString::from_der(public_key.subject_public_key).unwrap();
+            bytes_public_key = public_key.subject_public_key.to_vec();
         } else {
             let public_key = SubjectPublicKeyInfoOwned::from_pem(&bytes).unwrap();
             algorithm = public_key.algorithm.algorithm.to_string();
-            key = public_key.subject_public_key;
+            bytes_public_key = public_key.subject_public_key.as_bytes().unwrap().to_vec();
         }
-
-        let bytes_public_key = key.as_bytes().unwrap();
 
         let algorithm_str: &str = &algorithm;
 
@@ -77,7 +75,7 @@ impl VerifyCmd {
                         dilithium2::SIGNBYTES,
                     )));
                 }
-                let public = dilithium2::PublicKey::from_bytes(bytes_public_key);
+                let public = dilithium2::PublicKey::from_bytes(&bytes_public_key);
                 public.verify(&message, &sig_bytes)
             }
             OID_DILITHIUM3 => {
@@ -88,7 +86,7 @@ impl VerifyCmd {
                         dilithium2::SIGNBYTES,
                     )));
                 }
-                let public = dilithium3::PublicKey::from_bytes(bytes_public_key);
+                let public = dilithium3::PublicKey::from_bytes(&bytes_public_key);
                 public.verify(&message, &sig_bytes)
             }
             OID_DILITHIUM5 => {
@@ -99,7 +97,7 @@ impl VerifyCmd {
                         dilithium2::SIGNBYTES,
                     )));
                 }
-                let public = dilithium5::PublicKey::from_bytes(bytes_public_key);
+                let public = dilithium5::PublicKey::from_bytes(&bytes_public_key);
                 public.verify(&message, &sig_bytes)
             }
             OID_MLDSA44 => {
@@ -110,7 +108,7 @@ impl VerifyCmd {
                         ml_dsa_44::SIGNBYTES,
                     )));
                 }
-                let public = ml_dsa_44::PublicKey::from_bytes(bytes_public_key);
+                let public = ml_dsa_44::PublicKey::from_bytes(&bytes_public_key);
                 public.verify(&message, &sig_bytes, None)
             }
             OID_MLDSA65 => {
@@ -121,7 +119,7 @@ impl VerifyCmd {
                         ml_dsa_65::SIGNBYTES,
                     )));
                 }
-                let public = ml_dsa_65::PublicKey::from_bytes(bytes_public_key);
+                let public = ml_dsa_65::PublicKey::from_bytes(&bytes_public_key);
                 public.verify(&message, &sig_bytes, None)
             }
             OID_MLDSA87 => {
@@ -132,7 +130,7 @@ impl VerifyCmd {
                         ml_dsa_87::SIGNBYTES,
                     )));
                 }
-                let public = ml_dsa_87::PublicKey::from_bytes(bytes_public_key);
+                let public = ml_dsa_87::PublicKey::from_bytes(&bytes_public_key);
                 public.verify(&message, &sig_bytes, None)
             }
             _ => return Err(CryptoError::InvalidLengthSignature(sig_bytes.len())),
@@ -203,7 +201,7 @@ mod test {
     #[test]
     fn verify_all_algorithms_all_formats() {
         let algorithms = ["dil2", "dil3", "dil5", "mldsa44", "mldsa65", "mldsa87"];
-        let formats = ["PEM"];
+        let formats = ["PEM", "DER"];
 
         for alg in algorithms {
             for sec_format in formats {
@@ -212,5 +210,36 @@ mod test {
                 }
             }
         }
+    }
+
+    #[test]
+    fn verify_with_missing_public_key_returns_io_error() {
+        let verify = VerifyCmd::parse_from([
+            "verify",
+            "--pub",
+            "missing_public_key.pem",
+            "--sig",
+            "missing_signature.bin",
+            "--file",
+            "missing_message.bin",
+        ]);
+
+        assert!(matches!(verify.run(), Err(CryptoError::Io(_))));
+    }
+
+    #[test]
+    fn verify_with_missing_signature_returns_io_error() {
+        let pub_file = "missing_pub_for_sig_test.pem".to_string();
+        let verify = VerifyCmd::parse_from([
+            "verify",
+            "--pub",
+            &pub_file,
+            "--sig",
+            "missing_signature.bin",
+            "--file",
+            "missing_message.bin",
+        ]);
+
+        assert!(matches!(verify.run(), Err(CryptoError::Io(_))));
     }
 }

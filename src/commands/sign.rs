@@ -184,4 +184,17 @@ mod test {
             }
         }
     }
+
+    #[test]
+    fn sign_with_missing_secret_key_returns_io_error() {
+        let sign = SignCmd::parse_from([
+            "sign",
+            "--sec",
+            "missing_secret_key.pem",
+            "--file",
+            "missing_input_file.bin",
+        ]);
+
+        assert!(matches!(sign.run(), Err(CryptoError::Io(_))));
+    }
 }
