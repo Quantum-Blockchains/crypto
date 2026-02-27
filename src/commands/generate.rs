@@ -252,13 +252,8 @@ mod tests {
 
     #[test]
     fn generate_with_invalid_entropy_returns_error() {
-        let generate = GenerateCmd::parse_from([
-            "generate",
-            "--algorithm",
-            "dil2",
-            "--entropy",
-            "not_base64",
-        ]);
+        let generate =
+            GenerateCmd::parse_from(["generate", "--algorithm", "dil2", "--entropy", "not_base64"]);
 
         assert!(matches!(
             generate.run(),
