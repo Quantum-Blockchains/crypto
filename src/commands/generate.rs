@@ -7,7 +7,10 @@ use super::{
     error::CryptoError,
     utils,
 };
-use crate::commands::{arg_enums::Format::{Der, Pem}, asc1_dilithium::{OID_MLDSA44, OID_MLDSA65, OID_MLDSA87}};
+use crate::commands::{
+    arg_enums::Format::{Der, Pem},
+    asc1_dilithium::{OID_MLDSA44, OID_MLDSA65, OID_MLDSA87},
+};
 use base64::{engine::general_purpose, Engine as _};
 use clap::Parser;
 use crystals_dilithium::{dilithium2, dilithium3, dilithium5, ml_dsa_44, ml_dsa_65, ml_dsa_87};
@@ -219,7 +222,7 @@ mod tests {
         let tag = format!("{}_{}", alg, out_format).to_lowercase();
         let out_file = format!(".out_test_{}", tag);
 
-        let generate = GenerateCmd::parse_from(&[
+        let generate = GenerateCmd::parse_from([
             "generate",
             "--algorithm",
             alg,
@@ -232,7 +235,7 @@ mod tests {
         assert!(generate.run().is_ok());
         assert!(std::path::Path::new(&out_file).exists());
 
-        cleanup(&vec![out_file]);
+        cleanup(&[out_file]);
     }
 
     #[test]

@@ -160,7 +160,7 @@ mod test {
         let pub_file = format!("ver_pub_test_{}", tag);
         let sig_file = format!("ver_sig_test_{}", tag);
 
-        let generate = GenerateCmd::parse_from(&[
+        let generate = GenerateCmd::parse_from([
             "generate",
             "--algorithm",
             alg,
@@ -170,7 +170,7 @@ mod test {
             sec_format,
         ]);
 
-        let public = PublicCmd::parse_from(&[
+        let public = PublicCmd::parse_from([
             "public",
             "--in",
             &sec_file,
@@ -182,27 +182,13 @@ mod test {
             pub_format,
         ]);
 
-        let sign = SignCmd::parse_from(&[
-            "sign",
-            "--sec",
-            &sec_file,
-            "--inform",
-            sec_format,
-            "--out",
-            &sig_file,
-            "--file",
+        let sign = SignCmd::parse_from([
+            "sign", "--sec", &sec_file, "--inform", sec_format, "--out", &sig_file, "--file",
             &pub_file,
         ]);
 
-        let verify = VerifyCmd::parse_from(&[
-            "verify",
-            "--sig",
-            &sig_file,
-            "--pub",
-            &pub_file,
-            "--inform",
-            pub_format,
-            "--file",
+        let verify = VerifyCmd::parse_from([
+            "verify", "--sig", &sig_file, "--pub", &pub_file, "--inform", pub_format, "--file",
             &pub_file,
         ]);
 
@@ -211,7 +197,7 @@ mod test {
         assert!(sign.run().is_ok());
         assert!(verify.run().is_ok());
 
-        cleanup(&vec![sec_file, pub_file, sig_file]);
+        cleanup(&[sec_file, pub_file, sig_file]);
     }
 
     #[test]

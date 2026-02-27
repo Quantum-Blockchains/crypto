@@ -83,31 +83,31 @@ impl SignCmd {
                 utils::output(sig_bytes, &self.out_path, Der);
             }
             OID_DILITHIUM3 => {
-                let keypair = dilithium3::Keypair::from_bytes(&bytes_keypair);
+                let keypair = dilithium3::Keypair::from_bytes(bytes_keypair);
                 let signature = keypair.sign(&message);
                 let sig_bytes = signature.as_slice();
                 utils::output(sig_bytes, &self.out_path, Der);
             }
             OID_DILITHIUM5 => {
-                let keypair = dilithium5::Keypair::from_bytes(&bytes_keypair);
+                let keypair = dilithium5::Keypair::from_bytes(bytes_keypair);
                 let signature = keypair.sign(&message);
                 let sig_bytes = signature.as_slice();
                 utils::output(sig_bytes, &self.out_path, Der);
             }
             OID_MLDSA44 => {
-                let keypair = ml_dsa_44::Keypair::from_bytes(&bytes_keypair);
+                let keypair = ml_dsa_44::Keypair::from_bytes(bytes_keypair);
                 let signature = keypair.sign(&message, None, false).unwrap();
                 let sig_bytes = signature.as_slice();
                 utils::output(sig_bytes, &self.out_path, Der);
             }
             OID_MLDSA65 => {
-                let keypair = ml_dsa_65::Keypair::from_bytes(&bytes_keypair);
+                let keypair = ml_dsa_65::Keypair::from_bytes(bytes_keypair);
                 let signature = keypair.sign(&message, None, false).unwrap();
                 let sig_bytes = signature.as_slice();
                 utils::output(sig_bytes, &self.out_path, Der);
             }
             OID_MLDSA87 => {
-                let keypair = ml_dsa_87::Keypair::from_bytes(&bytes_keypair);
+                let keypair = ml_dsa_87::Keypair::from_bytes(bytes_keypair);
                 let signature = keypair.sign(&message, None, false).unwrap();
                 let sig_bytes = signature.as_slice();
                 utils::output(sig_bytes, &self.out_path, Der);
@@ -136,7 +136,7 @@ mod test {
         let pub_file = format!("sign_pub_test_{}", tag);
         let sig_file = format!("sign_sig_test_{}", tag);
 
-        let generate = GenerateCmd::parse_from(&[
+        let generate = GenerateCmd::parse_from([
             "generate",
             "--algorithm",
             alg,
@@ -146,7 +146,7 @@ mod test {
             sec_format,
         ]);
 
-        let public = PublicCmd::parse_from(&[
+        let public = PublicCmd::parse_from([
             "public",
             "--in",
             &sec_file,
@@ -158,15 +158,8 @@ mod test {
             pub_format,
         ]);
 
-        let sign = SignCmd::parse_from(&[
-            "sign",
-            "--sec",
-            &sec_file,
-            "--inform",
-            sec_format,
-            "--out",
-            &sig_file,
-            "--file",
+        let sign = SignCmd::parse_from([
+            "sign", "--sec", &sec_file, "--inform", sec_format, "--out", &sig_file, "--file",
             &pub_file,
         ]);
 
@@ -175,7 +168,7 @@ mod test {
         assert!(sign.run().is_ok());
         assert!(std::path::Path::new(&sig_file).exists());
 
-        cleanup(&vec![sec_file, pub_file, sig_file]);
+        cleanup(&[sec_file, pub_file, sig_file]);
     }
 
     #[test]
